@@ -3,9 +3,10 @@ import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
 import connectToDatabase from "./schema/db";
 import bcrypt from "bcrypt"
-import { ContentModel, UserModel } from "./schema/schema";
+import { ContentModel, UserModel ,LinkModel} from "./schema/schema";
 import { authMiddleware } from "./middlewware";
 import dotenv from 'dotenv';
+import { random } from "./utils";
 dotenv.config(); // Loads .env variables into process.env
 console.log(process.env.JWT_SECRET);
 const app = express();
@@ -110,20 +111,99 @@ app.get("/api/v1/content", authMiddleware,async (req: Request, res: Response) =>
    
     res.status(200).json({ message: "Content retrieved",content });
 });
-
-app.delete("/api/v1/content", (req: Request, res: Response) => {
+//@ts-ignore
+app.delete("/api/v1/content", authMiddleware ,async (req: Request, res: Response) => {
     // Implement content deletion logic here
+    const contentId = req.body.contentId;
+    //@ts-ignore
+    const userId=req.user
+    console.log(userId)
+
+    await ContentModel.deleteMany({
+        contentId,
+        userId: userId,
+    })
+    
     res.status(200).json({ message: "Content deleted" });
 });
 
-app.post("/api/v1/brain/share", (req: Request, res: Response) => {
+
+
+//@ts-ignore
+app.post("/api/v1/brain/share", authMiddleware, async (req: Request, res: Response) => {
     // Implement brain share logic here
-    res.status(200).json({ message: "Brain shared" });
+    const share = req.body.share;
+    //@ts-ignore
+    const userId=req.user
+
+    if (share) {
+            const existingLink = await LinkModel.findOne({
+                userId: userId
+            });
+
+            if (existingLink) {
+                res.json({
+                    hash: existingLink.hash
+                })
+                return;
+            }
+            const hash = random(10);
+            console.log(hash)
+            await LinkModel.create({
+                userId: userId,
+                hash: hash
+            })
+            res.json({
+                hash
+            })
+    } else {
+        await LinkModel.deleteOne({
+            userId: userId
+        });
+
+        res.json({
+            message: "Removed link"
+        })
+    }
 });
 
-app.get("/api/v1/brain/:shareLink", (req: Request, res: Response) => {
+app.get("/api/v1/brain/:shareLink", async (req: Request, res: Response) => {
     // Implement brain retrieval logic here
-    res.status(200).json({ message: "Brain retrieved" });
+    const hash = req.params.shareLink;
+    const link = await LinkModel.findOne({
+        hash
+    });
+
+    if (!link) {
+        res.status(411).json({
+            message: "Sorry incorrect input"
+        })
+        return;
+    }
+
+     // userId
+     const content = await ContentModel.find({
+        userId: link.userId
+    })
+    console.log(link);
+    const user = await UserModel.findOne({
+        _id: link.userId
+    })
+    if (!user) {
+        res.status(411).json({
+            message: "user not found, error should ideally not happen"
+        })
+        return;
+    }
+
+    res.status(200).json({
+        "message":"Brain get data",
+        username: user.username,
+        content: content
+    })
+
+
+    // res.status(200).json({ message: "Brain retrieved" });
 });
 
 app.listen(PORT, () => {
