@@ -7,9 +7,11 @@ import { ContentModel, UserModel ,LinkModel} from "./schema/schema";
 import { authMiddleware } from "./middlewware";
 import dotenv from 'dotenv';
 import { random } from "./utils";
+import cors from 'cors';
 dotenv.config(); // Loads .env variables into process.env
 console.log(process.env.JWT_SECRET);
 const app = express();
+app.use(cors())
 const PORT = 3000;
 
 app.use(express.json());
@@ -37,6 +39,7 @@ app.post("/api/v1/signup", async (req: Request, res: Response): Promise<Response
 
         // Create and save the user
         const user = new UserModel({ username, password: hashedPassword });
+       
         await user.save();
 
         return res.status(201).json({ message: "User registered successfully", user });
