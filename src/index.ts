@@ -118,12 +118,13 @@ app.get("/api/v1/content", authMiddleware,async (req: Request, res: Response) =>
 app.delete("/api/v1/content", authMiddleware ,async (req: Request, res: Response) => {
     // Implement content deletion logic here
     const contentId = req.body.contentId;
+    console.log(contentId)
     //@ts-ignore
     const userId=req.user
-    console.log(userId)
+    // console.log(userId)
 
-    await ContentModel.deleteMany({
-        contentId,
+    await ContentModel.deleteOne({
+        _id:contentId,
         userId: userId,
     })
     
